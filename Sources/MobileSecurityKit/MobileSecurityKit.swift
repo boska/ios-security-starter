@@ -1,6 +1,6 @@
 import Foundation
 
-public enum MobileSecurityKit {
+public enum SecurityAudit {
     public static func audit() -> SecurityDetector.Report {
         SecurityDetector.runAll()
     }

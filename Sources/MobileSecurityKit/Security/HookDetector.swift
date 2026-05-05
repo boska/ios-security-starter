@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import MachO
 
 /// Detects runtime hooking frameworks (Frida, Substrate, Substitute, etc.).
 enum HookDetector {

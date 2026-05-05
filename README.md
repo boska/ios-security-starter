@@ -38,9 +38,9 @@ make audit
 ```swift
 import MobileSecurityKit
 
-let report = MobileSecurityKit.audit()
+let report = SecurityAudit.audit()
 
-if report.isTrusted {
+if SecurityAudit.isTrusted {
     print("Environment looks clean")
 } else {
     for finding in report.threats {

@@ -1,5 +1,8 @@
 import Darwin
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Detects jailbroken iOS devices (and rooted macOS to a lesser extent).
 /// All checks are passive — no side effects, no crashes, no app termination.
@@ -70,36 +73,13 @@ enum JailbreakDetector {
     }
 
     /// Checks for the `cydia://` and other jailbreak-specific URL schemes.
-    /// Uses `dlopen`/`dlsym` to avoid a hard UIKit import.
     static func hasJailbreakURLSchemes() -> Bool {
         #if os(iOS)
         let schemes = ["cydia://", "sileo://", "zbra://", "filza://", "activator://"]
-
-        guard
-            let handle = dlopen("/System/Library/Frameworks/UIKit.framework/UIKit", RTLD_NOW),
-            let sharedApplicationSel = NSSelectorFromString("sharedApplication") as Selector?,
-            let canOpenURLSel = NSSelectorFromString("canOpenURL:") as Selector?,
-            let appClass = NSClassFromString("UIApplication"),
-            appClass.responds(to: sharedApplicationSel)
-        else { return false }
-
-        let app = appClass.perform(sharedApplicationSel)?.takeUnretainedValue()
-        guard let app else {
-            dlclose(handle)
-            return false
+        return schemes.contains { scheme in
+            guard let url = URL(string: scheme) else { return false }
+            return UIApplication.shared.canOpenURL(url)
         }
-
-        for scheme in schemes {
-            if let url = URL(string: scheme) {
-                let result = (app as AnyObject).perform(canOpenURLSel, with: url)
-                if result != nil {
-                    dlclose(handle)
-                    return true
-                }
-            }
-        }
-        dlclose(handle)
-        return false
         #else
         return false
         #endif
