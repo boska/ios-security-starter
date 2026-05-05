@@ -12,6 +12,13 @@ public enum SecurityCheckType: String, Sendable, CaseIterable {
     case jailbreakDetected
 }
 
+/// Coarse recommendation produced by a policy layer on top of raw findings.
+public enum SecurityDecision: String, Sendable {
+    case allow
+    case review
+    case block
+}
+
 /// The result of a single security check.
 public struct SecurityCheckResult: Sendable {
     /// Which threat category this result belongs to.
@@ -20,6 +27,23 @@ public struct SecurityCheckResult: Sendable {
     public let isCompromised: Bool
     /// Human-readable description of what was checked.
     public let detail: String
+}
+
+/// A simple default policy that turns raw signals into an action recommendation.
+public enum DefaultSecurityPolicy {
+    public static func decide(report: SecurityDetector.Report) -> SecurityDecision {
+        let types = Set(report.threats.map(\.type))
+
+        if types.contains(.debuggerAttached) || types.contains(.hookingDetected) {
+            return .block
+        }
+
+        if types.contains(.jailbreakDetected) {
+            return .review
+        }
+
+        return .allow
+    }
 }
 
 // MARK: - SecurityDetector
@@ -55,9 +79,29 @@ public struct SecurityDetector: Sendable {
             findings.filter { $0.isCompromised }
         }
 
+        /// Number of findings that indicate an active threat.
+        public var threatCount: Int {
+            threats.count
+        }
+
+        /// Distinct compromised categories seen in the current report.
+        public var compromisedTypes: Set<SecurityCheckType> {
+            Set(threats.map(\.type))
+        }
+
+        /// Default recommendation from the built-in simple policy layer.
+        public var decision: SecurityDecision {
+            DefaultSecurityPolicy.decide(report: self)
+        }
+
         /// Returns findings filtered to a specific threat category.
         public func findings(for type: SecurityCheckType) -> [SecurityCheckResult] {
             findings.filter { $0.type == type }
+        }
+
+        /// Returns `true` when any finding for the given category is compromised.
+        public func containsThreat(_ type: SecurityCheckType) -> Bool {
+            threats.contains { $0.type == type }
         }
     }
 

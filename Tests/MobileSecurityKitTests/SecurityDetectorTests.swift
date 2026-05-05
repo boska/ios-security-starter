@@ -81,6 +81,43 @@ struct SecurityDetectorTests {
         #expect(report.threats.allSatisfy { $0.isCompromised })
     }
 
+    @Test("report exposes compromised types and threat count")
+    func reportExposesThreatSummary() {
+        let report = SecurityDetector.Report(findings: [
+            SecurityCheckResult(type: .debuggerAttached, isCompromised: true, detail: "bad"),
+            SecurityCheckResult(type: .debuggerAttached, isCompromised: true, detail: "bad-2"),
+            SecurityCheckResult(type: .jailbreakDetected, isCompromised: false, detail: "ok"),
+        ])
+        #expect(report.threatCount == 2)
+        #expect(report.compromisedTypes == [.debuggerAttached])
+        #expect(report.containsThreat(.debuggerAttached))
+        #expect(!report.containsThreat(.hookingDetected))
+    }
+
+    @Test("default policy blocks debugger and hooking findings")
+    func defaultPolicyBlocksStrongSignals() {
+        let report = SecurityDetector.Report(findings: [
+            SecurityCheckResult(type: .hookingDetected, isCompromised: true, detail: "hook"),
+        ])
+        #expect(report.decision == .block)
+    }
+
+    @Test("default policy marks jailbreak-only findings for review")
+    func defaultPolicyReviewsJailbreakOnlySignals() {
+        let report = SecurityDetector.Report(findings: [
+            SecurityCheckResult(type: .jailbreakDetected, isCompromised: true, detail: "jb"),
+        ])
+        #expect(report.decision == .review)
+    }
+
+    @Test("default policy allows clean reports")
+    func defaultPolicyAllowsCleanReports() {
+        let report = SecurityDetector.Report(findings: [
+            SecurityCheckResult(type: .debuggerAttached, isCompromised: false, detail: "ok"),
+        ])
+        #expect(report.decision == .allow)
+    }
+
     // MARK: - SecurityCheckResult
 
     @Test("SecurityCheckResult stores values correctly")
